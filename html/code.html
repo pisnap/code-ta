@@ -1,0 +1,56 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitoring Real-Time</title>
+  <style>
+    body {
+      background: linear-gradient(to right, #141e30, #243b55);
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    .card {
+      background: rgba(255,255,255,0.1);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      max-width: 400px;
+      margin: auto;
+    }
+    h1 { font-size: 2em; }
+    p { font-size: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📟 Monitoring Sensor</h1>
+    <p>Suhu: <span id="suhu">--</span> °C</p>
+    <p>Kelembaban: <span id="hum">--</span> %</p>
+    <p>Volume Madu: <span id="vol">--</span> ml</p>
+  </div>
+
+  <script>
+    var gateway = `ws://192.168.4.1:81/`; // GANTI ini ke IP ESP32 kamu
+    var websocket;
+
+    window.addEventListener('load', onLoad);
+
+    function onLoad() {
+      websocket = new WebSocket(gateway);
+      websocket.onmessage = function(event) {
+        try {
+          var data = JSON.parse(event.data);
+          document.getElementById('suhu').textContent = data.suhu.toFixed(1);
+          document.getElementById('hum').textContent = data.hum.toFixed(1);
+          document.getElementById('vol').textContent = data.vol.toFixed(1);
+        } catch (e) {
+          console.error("Gagal parsing JSON:", e, event.data);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
