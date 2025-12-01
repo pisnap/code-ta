@@ -1,56 +1,479 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Monitoring Real-Time</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitoring Realtime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(to right, #141e30, #243b55);
-      color: #fff;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
+      background: #f4f6fa;
+      color: #222;
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-    .card {
-      background: rgba(255,255,255,0.1);
-      padding: 30px;
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
       border-radius: 20px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      max-width: 400px;
-      margin: auto;
+      box-shadow: 0 4px 24px #0001;
+      padding: 36px 36px 32px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
     }
-    h1 { font-size: 2em; }
-    p { font-size: 1.2em; }
+
+    h2,
+    h3 {
+      text-align: left;
+      font-size: 1.25em;
+      margin-bottom: 12px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .section {
+      margin-top: 0;
+    }
+
+    .realtime-card {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #f7fafc;
+      border-radius: 14px;
+      padding: 22px 18px 16px 18px;
+      box-shadow: 0 1px 4px #0001;
+      margin-bottom: 0;
+    }
+
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 24px;
+    }
+
+    .sensor-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.13em;
+      margin-bottom: 0;
+    }
+
+    .sensor-icon {
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3em;
+      background: #e2e8f0;
+      border-radius: 50%;
+      margin-right: 7px;
+    }
+
+    .sensor-label {
+      flex: 1;
+      color: #4a5568;
+      font-weight: 600;
+      font-size: 1.04em;
+    }
+
+    .sensor-value {
+      font-weight: 700;
+      font-size: 1.18em;
+      color: #222;
+      min-width: 54px;
+      text-align: right;
+    }
+
+    .sensor-unit {
+      color: #718096;
+      font-size: 1em;
+      margin-left: 2px;
+    }
+
+    #pressureGauge {
+      display: block;
+      margin: 10px auto 0 auto;
+      background: #f7fafc;
+    }
+
+    .save-btn {
+      width: 100%;
+      margin-top: 18px;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #38b2ac 0%, #4299e1 100%);
+      color: #fff;
+      font-size: 1.13em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      box-shadow: 0 2px 8px #4299e122;
+    }
+
+    .save-btn:hover {
+      background: linear-gradient(90deg, #319795 0%, #2b6cb0 100%);
+    }
+
+    .chart-card {
+      background: #f7fafc;
+      border-radius: 14px;
+      padding: 24px 18px 18px 18px;
+      box-shadow: 0 1px 4px #0001;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #myChart {
+      background: #fff;
+      border-radius: 8px;
+      margin-top: 10px;
+      min-height: 340px;
+      max-width: 100%;
+      width: 100% !important;
+      height: 340px !important;
+    }
+
+    .table-card {
+      background: #f7fafc;
+      border-radius: 14px;
+      padding: 16px 8px 8px 8px;
+      box-shadow: 0 1px 4px #0001;
+    }
+
+    table {
+      width: 100%;
+      background: #fff;
+      color: #222;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 1.04em;
+      border-collapse: collapse;
+      box-shadow: 0 1px 2px #0001;
+    }
+
+    th,
+    td {
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #e2e8f0;
+      color: #2d3748;
+      font-weight: 700;
+      font-size: 1.04em;
+    }
+
+    tr:nth-child(even) {
+      background: #f1f5f9;
+    }
+
+    .btn-delete {
+      background: #e53e3e;
+      color: #fff;
+      border-radius: 4px;
+      padding: 5px 12px;
+      font-size: 1em;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #c53030;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      margin: 14px 0 0 0;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .page-btn {
+      margin: 0 2px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      background: #4299e1;
+      color: #fff;
+      font-size: 1em;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .page-btn.active,
+    .page-btn:focus {
+      background: #38b2ac;
+      outline: none;
+    }
+
+    .page-btn:disabled {
+      background: #cbd5e1;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    .show-label {
+      margin-left: 10px;
+      color: #4a5568;
+      font-size: 1em;
+      font-weight: 600;
+      align-self: center;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        max-width: 99vw;
+        padding: 16px 2vw;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 8px 1vw;
+      }
+
+      .realtime-card,
+      .chart-card,
+      .table-card {
+        padding: 10px 2vw 10px 2vw;
+      }
+
+      #myChart {
+        min-height: 220px;
+        height: 220px !important;
+      }
+
+      table,
+      th,
+      td {
+        font-size: 0.93em;
+      }
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
+
 <body>
-  <div class="card">
-    <h1>📟 Monitoring Sensor</h1>
-    <p>Suhu: <span id="suhu">--</span> °C</p>
-    <p>Kelembaban: <span id="hum">--</span> %</p>
-    <p>Volume Madu: <span id="vol">--</span> ml</p>
+  <div class="container">
+    <h2>Monitoring Realtime</h2>
+    <div class="realtime-card">
+      <div class="sensor-grid">
+        <div class="sensor-row">
+          <span class="sensor-icon" title="Suhu"><i class="ph ph-thermometer"></i></span>
+          <span class="sensor-label">Suhu</span>
+          <span class="sensor-value" id="suhu">--</span>
+          <span class="sensor-unit">°C</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sensor-icon" title="Kelembaban"><i class="ph ph-drop"></i></span>
+          <span class="sensor-label">Kelembaban</span>
+          <span class="sensor-value" id="hum">--</span>
+          <span class="sensor-unit">%</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sensor-icon" title="Volume"><i class="ph ph-beaker"></i></span>
+          <span class="sensor-label">Volume</span>
+          <span class="sensor-value" id="vol">--</span>
+          <span class="sensor-unit">ml</span>
+        </div>
+        <div class="sensor-row">
+          <span class="sensor-icon" title="Tekanan"><i class="ph ph-gauge"></i></span>
+          <span class="sensor-label">Tekanan</span>
+          <span style="flex:2;display:flex;align-items:center;justify-content:flex-end;">
+            <canvas id="pressureGauge" width="120" height="60"></canvas>
+          </span>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveData()">Simpan Data</button>
+    </div>
+    <div class="section chart-card">
+      <h3>Grafik Data Terbaru</h3>
+      <canvas id="myChart"></canvas>
+    </div>
+    <div class="section table-card">
+      <h3>Riwayat Data</h3>
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th>Waktu</th>
+            <th>Suhu (°C)</th>
+            <th>Kelembaban (%)</th>
+            <th>Volume (ml)</th>
+            <th>Tekanan (bar)</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
   </div>
-
   <script>
-    var gateway = `ws://192.168.4.1:81/`; // GANTI ini ke IP ESP32 kamu
+    var gateway = `ws://${window.location.hostname}:81/`;
     var websocket;
-
+    var latestData = {};
+    const firebaseUrl = "https://monitoring-alat-pengisap-madu-default-rtdb.asia-southeast1.firebasedatabase.app/monitoring.json";
+    let chart;
+    let pressureGaugeCtx;
+    const MAX_PRESSURE_GAUGE = 1.5;
+    let allEntries = [], currentPage = 1, dataPerPage = 5;
     window.addEventListener('load', onLoad);
-
+    function initPressureGauge() {
+      const canvas = document.getElementById('pressureGauge');
+      if (canvas) {
+        pressureGaugeCtx = canvas.getContext('2d');
+        updatePressureGauge(0);
+      }
+    }
+    function updatePressureGauge(pressure) {
+      if (!pressureGaugeCtx) return;
+      const canvas = pressureGaugeCtx.canvas;
+      let ctx = pressureGaugeCtx;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.arc(canvas.width/2, canvas.height, canvas.width/2-5, Math.PI, 0);
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      let minP = 0, maxP = MAX_PRESSURE_GAUGE;
+      let val = Math.max(minP, Math.min(maxP, parseFloat(pressure)||0));
+      let angle = Math.PI * (1 - (val-minP)/(maxP-minP));
+      let r = canvas.width/2-10;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width/2, canvas.height);
+      ctx.lineTo(canvas.width/2 + r*Math.cos(angle), canvas.height - r*Math.sin(angle));
+      ctx.strokeStyle = '#4299e1';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.font = 'bold 14px Inter, Arial';
+      ctx.fillStyle = '#222';
+      ctx.textAlign = 'center';
+      ctx.fillText((pressure === "error") ? "error" : Number(pressure).toFixed(2) + ' bar', canvas.width/2, canvas.height-18);
+    }
     function onLoad() {
+      initPressureGauge();
       websocket = new WebSocket(gateway);
-      websocket.onmessage = function(event) {
+      websocket.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
-          document.getElementById('suhu').textContent = data.suhu.toFixed(1);
-          document.getElementById('hum').textContent = data.hum.toFixed(1);
-          document.getElementById('vol').textContent = data.vol.toFixed(1);
-        } catch (e) {
-          console.error("Gagal parsing JSON:", e, event.data);
-        }
+          document.getElementById('suhu').textContent = (data.suhu === "error") ? "error" : Number(data.suhu).toFixed(2);
+          document.getElementById('hum').textContent = (data.hum === "error") ? "error" : Number(data.hum).toFixed(2);
+          document.getElementById('vol').textContent = (data.vol === "error") ? "error" : Number(data.vol).toFixed(2);
+          updatePressureGauge(data.tekanan);
+          latestData = data;
+        } catch (e) { console.error("WebSocket error:", e); }
       };
+      loadAllData();
+    }
+    function saveData() {
+      if (!latestData.suhu || latestData.suhu === "error") { alert("Data belum tersedia!"); return; }
+      fetch('/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(latestData)
+      })
+        .then(response => response.text())
+        .then(result => { alert('Data tersimpan!'); loadAllData(); })
+        .catch(error => { alert('Gagal simpan data!'); });
+    }
+    function loadAllData() {
+      fetch(firebaseUrl)
+        .then(response => response.json())
+        .then(data => {
+          allEntries = data ? Object.entries(data).sort((a, b) => new Date(b[1].waktu) - new Date(a[1].waktu)) : [];
+          renderTable();
+          renderChart();
+          renderPagination();
+        })
+        .catch(error => { console.error('Error load data:', error); });
+    }
+    function renderTable() {
+      const tbody = document.getElementById('data-table').querySelector('tbody');
+      tbody.innerHTML = "";
+      const pageData = allEntries.slice((currentPage-1)*dataPerPage, currentPage*dataPerPage);
+      pageData.forEach(([key, value]) => {
+        const row = `<tr><td>${new Date(value.waktu).toLocaleString()}</td><td>${value.suhu === "error" ? "error" : Number(value.suhu).toFixed(2)}</td><td>${value.hum === "error" ? "error" : Number(value.hum).toFixed(2)}</td><td>${value.vol === "error" ? "error" : Number(value.vol).toFixed(2)}</td><td>${value.tekanan === "error" ? "error" : Number(value.tekanan).toFixed(2)}</td><td><button class='btn-delete' onclick="deleteData('${key}')">Hapus</button></td></tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+    function renderPagination() {
+      const total = allEntries.length;
+      const totalPages = Math.ceil(total/dataPerPage);
+      const pagDiv = document.getElementById('pagination');
+      pagDiv.innerHTML = '';
+      // Previous
+      pagDiv.innerHTML += `<button class='page-btn' onclick='prevPage()' ${currentPage===1?'disabled':''}>Prev</button>`;
+      // Numbered
+      for(let i=1;i<=totalPages;i++) {
+        pagDiv.innerHTML += `<button class='page-btn${i===currentPage?' active':''}' onclick='gotoPage(${i})'>${i}</button>`;
+      }
+      // Next
+      pagDiv.innerHTML += `<button class='page-btn' onclick='nextPage()' ${currentPage===totalPages||totalPages===0?'disabled':''}>Next</button>`;
+      // Per page
+      pagDiv.innerHTML += `<span class='show-label'>Show:</span>`;
+      [5,10,15,20].forEach(n => {
+        pagDiv.innerHTML += `<button class='page-btn${n===dataPerPage?' active':''}' onclick='setPerPage(${n})'>${n}</button>`;
+      });
+    }
+    function setPerPage(n) { dataPerPage=n; currentPage=1; renderTable(); renderPagination(); }
+    function gotoPage(n) { currentPage=n; renderTable(); renderPagination(); }
+    function prevPage() { if(currentPage>1){ currentPage--; renderTable(); renderPagination(); } }
+    function nextPage() { const totalPages=Math.ceil(allEntries.length/dataPerPage); if(currentPage<totalPages){ currentPage++; renderTable(); renderPagination(); } }
+    function deleteData(key) {
+      fetch("https://monitoring-alat-pengisap-madu-default-rtdb.asia-southeast1.firebasedatabase.app/monitoring/" + key + ".json", { method: 'DELETE' })
+        .then(response => { loadAllData(); })
+        .catch(error => { alert('Gagal hapus data!'); });
+    }
+    function renderChart() {
+      const chartData = allEntries.slice(0,10).reverse();
+      const waktu = chartData.map(([_, v]) => {
+        const date = new Date(v.waktu);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}`;
+      });
+      const suhu = chartData.map(([_, v]) => v.suhu === "error" ? null : v.suhu);
+      const hum = chartData.map(([_, v]) => v.hum === "error" ? null : v.hum);
+      const vol = chartData.map(([_, v]) => v.vol === "error" ? null : v.vol);
+      const tekanan = chartData.map(([_, v]) => v.tekanan === "error" ? null : v.tekanan);
+      const ctx = document.getElementById('myChart').getContext('2d');
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: waktu,
+          datasets: [
+            { label: 'Suhu (°C)', data: suhu, borderColor: 'rgba(255,99,132,1)', backgroundColor: 'rgba(255,99,132,0.2)', fill: false, tension: 0.3 },
+            { label: 'Kelembaban (%)', data: hum, borderColor: 'rgba(54,162,235,1)', backgroundColor: 'rgba(54,162,235,0.2)', fill: false, tension: 0.3 },
+            { label: 'Volume (ml)', data: vol, borderColor: 'rgba(255,206,86,1)', backgroundColor: 'rgba(255,206,86,0.2)', fill: false, tension: 0.3 },
+            { label: 'Tekanan (bar)', data: tekanan, borderColor: 'rgba(56,178,172,1)', backgroundColor: 'rgba(56,178,172,0.2)', fill: false, tension: 0.3 }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'top' }, title: { display: true, text: 'Grafik 10 Data Terbaru' } },
+          scales: { x: { title: { display: true, text: 'Waktu (DD-MM)' } }, y: { beginAtZero: true } }
+        }
+      });
     }
   </script>
 </body>
+
 </html>

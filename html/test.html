@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Monitoring Realtime</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .container { max-width: 100%; margin-top: 30px; }
+        .card { margin-bottom: 20px; }
+        .sensor-card .card-body {
+            min-height: 130px;
+            padding: 28px 8px 18px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .sensor-card h3 {
+            font-size: 2.2rem;
+            margin: 0;
+            padding: 0;
+        }
+        .sensor-card canvas {
+            display: block;
+            margin: 0 auto;
+            height: 48px !important;
+            width: 90px !important;
+        }
+        .chart-table-row { display: flex; gap: 20px; }
+        .chart-col, .table-col { flex: 1 1 0; min-width: 0; }
+        .chart-card #sensorChart { height: 420px !important; max-height: 420px; }
+        .chart-scroll-x {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        @media (max-width: 900px) {
+            .chart-card #sensorChart { height: 340px !important; max-height: 340px; }
+            .chart-table-row { flex-direction: column; gap: 0; }
+            .chart-col, .table-col { width: 100%; }
+        }
+        @media (max-width: 600px) {
+            .table-responsive { font-size: 0.9rem; }
+            .sensor-card .card-body { min-height: 90px; padding: 14px 2px 10px 2px; }
+            .sensor-card h3 { font-size: 1.3rem; }
+            .sensor-card canvas { height: 32px !important; width: 60px !important; }
+            .chart-card #sensorChart { height: 280px !important; max-height: 280px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4 text-center">Monitoring Realtime</h2>
+        <!-- Live Sensor Data -->
+        <div class="row mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card text-center sensor-card">
+                    <div class="card-body">
+                        <h6>Suhu (&deg;C)</h6>
+                        <h3 id="suhu">--</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center sensor-card">
+                    <div class="card-body">
+                        <h6>Kelembaban (%)</h6>
+                        <h3 id="hum">--</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center sensor-card">
+                    <div class="card-body">
+                        <h6>Volume (ml)</h6>
+                        <h3 id="vol">--</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card text-center sensor-card">
+                    <div class="card-body">
+                        <h6>Tekanan (bar)</h6>
+                        <canvas id="pressureGauge" width="90" height="48"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-4 text-center">
+            <button class="btn btn-success" id="saveBtn">Simpan Data</button>
+        </div>
+        <!-- Chart and Table -->
+        <div class="chart-table-row">
+            <div class="chart-col">
+                <div class="card mb-4 chart-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Grafik 10 Data Terbaru</h5>
+                        <div class="chart-scroll-x"><div id="sensorChart" style="min-width:600px;"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-col">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Tersimpan</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+                            <div>
+                                <label for="rowsPerPage" class="form-label mb-0 me-2">Tampilkan</label>
+                                <select id="rowsPerPage" class="form-select d-inline-block w-auto">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="15">15</option>
+                                    <option value="20">20</option>
+                                </select>
+                                <span>data</span>
+                            </div>
+                            <div class="d-flex justify-content-end flex-grow-1">
+                                <button id="prevPage" class="btn btn-outline-secondary btn-sm me-1">Previous</button>
+                                <button id="nextPage" class="btn btn-outline-secondary btn-sm">Next</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Suhu (&deg;C)</th>
+                                        <th>Kelembaban (%)</th>
+                                        <th>Volume (ml)</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    // --- SENSOR DATA VIA WEBSOCKET ---
+    var gateway = `ws://${window.location.hostname}:81/`;
+    var websocket;
+    var latestData = {};
+    const firebaseUrl = "https://monitoring-alat-pengisap-madu-default-rtdb.asia-southeast1.firebasedatabase.app/monitoring.json";
+    let chart;
+    let allEntries = [], currentPage = 1, dataPerPage = 10;
+    let pressureGaugeCtx;
+    const MAX_PRESSURE_GAUGE = 1.5;
+    window.addEventListener('load', onLoad);
+    function onLoad() {
+        websocket = new WebSocket(gateway);
+        websocket.onmessage = function (event) {
+            try {
+                var data = JSON.parse(event.data);
+                document.getElementById('suhu').textContent = (data.suhu === "error") ? "error" : Number(data.suhu).toFixed(2);
+                document.getElementById('hum').textContent = (data.hum === "error") ? "error" : Number(data.hum).toFixed(2);
+                document.getElementById('vol').textContent = (data.vol === "error") ? "error" : Number(data.vol).toFixed(2);
+                updatePressureGauge(data.tekanan);
+                latestData = data;
+            } catch (e) { console.error("WebSocket error:", e); }
+        };
+        loadAllData();
+        document.getElementById('saveBtn').onclick = saveData;
+        document.getElementById('rowsPerPage').onchange = function() {
+            dataPerPage = parseInt(this.value);
+            currentPage = 1;
+            renderTable();
+            renderPagination();
+        };
+        document.getElementById('prevPage').onclick = function() {
+            if (currentPage > 1) { currentPage--; renderTable(); renderPagination(); }
+        };
+        document.getElementById('nextPage').onclick = function() {
+            const totalPages = Math.ceil(allEntries.length/dataPerPage);
+            if (currentPage < totalPages) { currentPage++; renderTable(); renderPagination(); }
+        };
+        const canvas = document.getElementById('pressureGauge');
+        if (canvas) {
+            pressureGaugeCtx = canvas.getContext('2d');
+            updatePressureGauge(0);
+        }
+    }
+    function saveData() {
+        if (!latestData.suhu || latestData.suhu === "error") { alert("Data belum tersedia!"); return; }
+        // Only save suhu, hum, vol
+        const dataToSave = {
+            waktu: new Date().toISOString(),
+            suhu: latestData.suhu,
+            hum: latestData.hum,
+            vol: latestData.vol
+        };
+        fetch('/save', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dataToSave)
+        })
+        .then(response => response.text())
+        .then(result => { alert('Data tersimpan!'); loadAllData(); })
+        .catch(error => { alert('Gagal simpan data!'); });
+    }
+    function loadAllData() {
+        fetch(firebaseUrl)
+        .then(response => response.json())
+        .then(data => {
+            allEntries = data ? Object.entries(data).sort((a, b) => new Date(b[1].waktu) - new Date(a[1].waktu)) : [];
+            renderTable();
+            renderChart();
+            renderPagination();
+        })
+        .catch(error => { console.error('Error load data:', error); });
+    }
+    function renderTable() {
+        const tbody = document.getElementById('dataTable');
+        tbody.innerHTML = "";
+        const pageData = allEntries.slice((currentPage-1)*dataPerPage, currentPage*dataPerPage);
+        pageData.forEach(([key, value]) => {
+            const row = `<tr><td>${new Date(value.waktu).toLocaleString()}</td><td>${value.suhu === "error" ? "error" : Number(value.suhu).toFixed(2)}</td><td>${value.hum === "error" ? "error" : Number(value.hum).toFixed(2)}</td><td>${value.vol === "error" ? "error" : Number(value.vol).toFixed(2)}</td><td><button class='btn btn-danger btn-sm' onclick="deleteData('${key}')">Hapus</button></td></tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+    function renderPagination() {
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        const totalPages = Math.ceil(allEntries.length/dataPerPage);
+        document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+    }
+    function deleteData(key) {
+        fetch("https://monitoring-alat-pengisap-madu-default-rtdb.asia-southeast1.firebasedatabase.app/monitoring/" + key + ".json", { method: 'DELETE' })
+        .then(response => { loadAllData(); })
+        .catch(error => { alert('Gagal hapus data!'); });
+    }
+    function renderChart() {
+        const chartData = allEntries.slice(0,10).reverse();
+        // Prepare data for Google Charts
+        const dataArray = [['Waktu', 'Suhu (°C)', 'Kelembaban (%)', 'Volume (ml)']];
+        chartData.forEach(([_, v]) => {
+            const date = new Date(v.waktu);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const waktuLabel = `${day}-${month}`;
+            dataArray.push([
+                waktuLabel,
+                v.suhu === "error" ? null : Number(v.suhu),
+                v.hum === "error" ? null : Number(v.hum),
+                v.vol === "error" ? null : Number(v.vol)
+            ]);
+        });
+        // Load Google Charts and draw
+        google.charts.load('current', {'packages':['corechart']});
+        google.charts.setOnLoadCallback(drawChart);
+        function drawChart() {
+            var data = google.visualization.arrayToDataTable(dataArray);
+            var chartHeight = 420;
+            if (window.innerWidth < 600) chartHeight = 280;
+            else if (window.innerWidth < 900) chartHeight = 340;
+            var options = {
+                curveType: 'function',
+                legend: { position: 'top', textStyle: { fontSize: 14, bold: true, color: '#333' } },
+                chartArea: { left: 60, top: 50, width: '85%', height: '70%' },
+                hAxis: {
+                    title: 'Waktu (DD-MM)',
+                    titleTextStyle: { fontSize: 13, italic: false, color: '#333' },
+                    textStyle: { fontSize: 12 },
+                    gridlines: { color: '#e0e7ef', count: 10 }
+                },
+                vAxis: {
+                    minValue: 0,
+                    title: '',
+                    gridlines: { color: '#e0e7ef', count: 8 },
+                    textStyle: { fontSize: 12 }
+                },
+                backgroundColor: { fill: 'transparent' },
+                colors: ['#ff6384', '#36a2eb', '#ffce56'],
+                pointSize: 7,
+                lineWidth: 4,
+                fontName: 'inherit',
+                tooltip: { textStyle: { fontSize: 13 }, showColorCode: true },
+                animation: { startup: true, duration: 700, easing: 'out' },
+                width: '100%',
+                height: chartHeight,
+            };
+            var chart = new google.visualization.LineChart(document.getElementById('sensorChart'));
+            chart.draw(data, options);
+        }
+        // Redraw on window resize for responsiveness
+        window.addEventListener('resize', () => {
+            if (typeof google !== 'undefined' && google.visualization && google.visualization.LineChart) {
+                drawChart();
+            }
+        }, { once: true });
+    }
+    function updatePressureGauge(pressure) {
+        if (!pressureGaugeCtx) return;
+        const canvas = pressureGaugeCtx.canvas;
+        let ctx = pressureGaugeCtx;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(canvas.width/2, canvas.height, canvas.width/2-5, Math.PI, 0);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        let minP = 0, maxP = MAX_PRESSURE_GAUGE;
+        let val = Math.max(minP, Math.min(maxP, parseFloat(pressure)||0));
+        let angle = Math.PI * (1 - (val-minP)/(maxP-minP));
+        let r = canvas.width/2-10;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width/2, canvas.height);
+        ctx.lineTo(canvas.width/2 + r*Math.cos(angle), canvas.height - r*Math.sin(angle));
+        ctx.strokeStyle = '#4299e1';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        // No number displayed
+    }
+    </script>
+</body>
+</html>
